@@ -1,9 +1,8 @@
-
 import sqlite3
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 DATABASE_PATH = Path(__file__).resolve().parent / "tasks.db"
@@ -14,10 +13,15 @@ app = FastAPI(
     version="0.3.0",
 )
 
-
 class TaskCreate(BaseModel):
-    title: str
-    description: str = ""
+    title: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+    description: str = Field(
+        default="",
+        max_length=500,
+    )
     completed: bool = False
 
 
