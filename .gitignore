@@ -1,0 +1,20 @@
+
+# Ambiente virtual
+.venv/
+venv/
+
+# Arquivos Python temporários
+__pycache__/
+*.py[cod]
+
+# Variáveis de ambiente e segredos
+.env
+.env.*
+
+# Ferramentas e configurações locais
+.vscode/
+
+# Testes e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
