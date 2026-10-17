@@ -36,14 +36,20 @@ def test_create_and_list_tasks(client):
     assert len(list_response.json()) == 1
 
 
+
+def test_reject_title_with_only_spaces(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "   "}
+    )
+
+    assert response.status_code == 422
+
+
 def test_reject_empty_title(client):
     response = client.post(
         "/tasks",
-        json={
-            "title": "",
-            "description": "Título inválido",
-            "completed": False,
-        },
+        json={"title": ""}
     )
 
     assert response.status_code == 422

@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 DATABASE_PATH = Path(__file__).resolve().parent / "tasks.db"
@@ -23,6 +23,16 @@ class TaskCreate(BaseModel):
         max_length=500,
     )
     completed: bool = False
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("O título não pode ficar vazio.")
+
+        return value
 
 
 def get_connection():
