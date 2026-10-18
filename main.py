@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response
 
 from database import get_connection, initialize_database
-from schemas import TaskCreate
+from schemas import TaskCreate, TaskUpdate, TaskResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,7 +41,7 @@ def health_check():
     return {"status": "healthy"}
 
 
-@app.post("/tasks", status_code=201)
+@app.post("/tasks", status_code=201, response_model=TaskResponse)
 def create_task(task: TaskCreate):
     with get_connection() as connection:
         cursor = connection.execute(
@@ -60,7 +60,7 @@ def create_task(task: TaskCreate):
         return task_to_dict(row)
 
 
-@app.get("/tasks")
+@app.get("/tasks", response_model=list[TaskResponse])
 def list_tasks():
     with get_connection() as connection:
         rows = connection.execute(
@@ -70,7 +70,7 @@ def list_tasks():
         return [task_to_dict(row) for row in rows]
 
 
-@app.get("/tasks/{task_id}")
+@app.get("/tasks/{task_id}", response_model=TaskResponse)
 def get_task(task_id: int):
     with get_connection() as connection:
         row = connection.execute(
@@ -87,8 +87,8 @@ def get_task(task_id: int):
         return task_to_dict(row)
 
 
-@app.put("/tasks/{task_id}")
-def update_task(task_id: int, updated_task: TaskCreate):
+@app.put("/tasks/{task_id}", response_model=TaskResponse)
+def update_task(task_id: int, updated_task: TaskUpdate):
     with get_connection() as connection:
         cursor = connection.execute(
             """

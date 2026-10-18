@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TaskCreate(BaseModel):
@@ -22,3 +22,16 @@ class TaskCreate(BaseModel):
             raise ValueError("O título não pode ficar vazio.")
 
         return value
+
+
+class TaskUpdate(TaskCreate):
+    pass
+
+
+class TaskResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    description: str
+    completed: bool

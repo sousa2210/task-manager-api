@@ -31,6 +31,15 @@ def test_create_and_list_tasks(client):
     assert response.status_code == 201
     assert response.json()["title"] == "Estudar Python"
 
+    assert set(response.json().keys()) == {
+        "id",
+        "title",
+        "description",
+        "completed",
+    }
+    assert isinstance(response.json()["id"], int)
+    assert response.json()["completed"] is False
+
     list_response = client.get("/tasks")
 
     assert list_response.status_code == 200
