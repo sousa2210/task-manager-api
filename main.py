@@ -1,11 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Response
-from pydantic import BaseModel, Field, field_validator
-
 
 from database import get_connection, initialize_database
-
+from schemas import TaskCreate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,28 +17,6 @@ app = FastAPI(
     version="0.4.0",
     lifespan=lifespan,
 )
-
-
-class TaskCreate(BaseModel):
-    title: str = Field(
-        min_length=1,
-        max_length=100,
-    )
-    description: str = Field(
-        default="",
-        max_length=500,
-    )
-    completed: bool = False
-
-    @field_validator("title")
-    @classmethod
-    def validate_title(cls, value: str) -> str:
-        value = value.strip()
-
-        if not value:
-            raise ValueError("O título não pode ficar vazio.")
-
-        return value
 
 
 
