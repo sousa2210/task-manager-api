@@ -1,7 +1,7 @@
-
 import pytest
 from fastapi.testclient import TestClient
 
+import database
 import main
 
 
@@ -9,9 +9,10 @@ import main
 def client(tmp_path, monkeypatch):
     # Usa um banco temporário exclusivo para cada teste.
     test_database = tmp_path / "test_tasks.db"
-    monkeypatch.setattr(main, "DATABASE_PATH", test_database)
 
-    main.initialize_database()
+    monkeypatch.setattr(database, "DATABASE_PATH", test_database)
+
+    database.initialize_database()
 
     with TestClient(main.app) as test_client:
         yield test_client

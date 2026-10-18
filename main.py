@@ -1,11 +1,8 @@
-import sqlite3
-from pathlib import Path
-
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field, field_validator
 
 
-DATABASE_PATH = Path(__file__).resolve().parent / "tasks.db"
+from database import get_connection, initialize_database
 
 app = FastAPI(
     title="Task Manager API",
@@ -34,25 +31,6 @@ class TaskCreate(BaseModel):
 
         return value
 
-
-def get_connection():
-    connection = sqlite3.connect(DATABASE_PATH)
-    connection.row_factory = sqlite3.Row
-    return connection
-
-
-def initialize_database():
-    with get_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                completed INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
 
 
 def task_to_dict(row):
