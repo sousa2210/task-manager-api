@@ -125,3 +125,98 @@ def test_task_not_found(client):
     response = client.get("/tasks/9999")
 
     assert response.status_code == 404
+
+
+def test_patch_updates_only_title(client):
+    create_response = client.post(
+        "/tasks",
+        json={
+            "title": "Tarefa original",
+            "description": "Descrição que deve ser preservada",
+            "completed": False,
+        },
+    )
+    task_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/tasks/{task_id}",
+        json={"title": "Novo título"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Novo título"
+    assert response.json()["description"] == "Descrição que deve ser preservada"
+    assert response.json()["completed"] is False
+
+
+def test_patch_can_set_completed_to_false(client):
+    create_response = client.post(
+        "/tasks",
+        json={
+            "title": "Tarefa concluída",
+            "completed": True,
+        },
+    )
+    task_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/tasks/{task_id}",
+        json={"completed": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["completed"] is False
+
+
+def test_patch_task_not_found(client):
+    response = client.patch(
+        "/tasks/9999",
+        json={"title": "Novo título"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_patch_rejects_empty_update(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Tarefa original"},
+    )
+    task_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/tasks/{task_id}",
+        json={},
+    )
+
+    assert response.status_code == 400
+
+
+def test_patch_rejects_title_with_only_spaces(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Título original"},
+    )
+    task_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/tasks/{task_id}",
+        json={"title": "   "},
+    )
+
+    assert response.status_code == 422
+
+
+def test_patch_rejects_unknown_field(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Tarefa original"},
+    )
+    task_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/tasks/{task_id}",
+        json={"priority": "high"},
+    )
+
+    assert response.status_code == 422

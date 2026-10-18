@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response
 
 from database import get_connection, initialize_database
-from schemas import TaskCreate, TaskUpdate, TaskResponse
+from schemas import TaskCreate, TaskUpdate, TaskResponse, TaskPartialUpdate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -133,3 +133,57 @@ def delete_task(task_id: int):
             )
 
     return Response(status_code=204)
+
+
+@app.patch("/tasks/{task_id}", response_model=TaskResponse)
+def partial_update_task(task_id: int, updated_fields: TaskPartialUpdate):
+    changes = updated_fields.model_dump(exclude_unset=True)
+
+    if not changes:
+        raise HTTPException(
+            status_code=400,
+            detail="Envie pelo menos um campo para atualizar.",
+        )
+
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM tasks WHERE id = ?",
+            (task_id,),
+        ).fetchone()
+
+        if row is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Tarefa não encontrada",
+            )
+
+        allowed_fields = {"title", "description", "completed"}
+
+        if not changes.keys() <= allowed_fields:
+            raise HTTPException(
+                status_code=400,
+                detail="Campo inválido para atualização.",
+            )
+
+        values = []
+        for field, value in changes.items():
+            if field == "completed":
+                value = int(value)
+
+            values.append(value)
+
+        set_clause = ", ".join(
+            f"{field} = ?" for field in changes
+        )
+
+        connection.execute(
+            f"UPDATE tasks SET {set_clause} WHERE id = ?",
+            (*values, task_id),
+        )
+
+        updated_row = connection.execute(
+            "SELECT * FROM tasks WHERE id = ?",
+            (task_id,),
+        ).fetchone()
+
+        return task_to_dict(updated_row)
