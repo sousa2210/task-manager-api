@@ -1,14 +1,25 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field, field_validator
 
 
 from database import get_connection, initialize_database
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    initialize_database()
+    yield
+
+
 app = FastAPI(
     title="Task Manager API",
     description="API para gerenciamento de tarefas",
-    version="0.3.0",
+    version="0.4.0",
+    lifespan=lifespan,
 )
+
 
 class TaskCreate(BaseModel):
     title: str = Field(
@@ -39,7 +50,6 @@ def task_to_dict(row):
     return task
 
 
-initialize_database()
 
 
 @app.get("/")

@@ -46,14 +46,34 @@ def test_reject_title_with_only_spaces(client):
 
     assert response.status_code == 422
 
-
 def test_reject_empty_title(client):
     response = client.post(
         "/tasks",
-        json={"title": ""}
+        json={"title": ""},
     )
 
     assert response.status_code == 422
+
+
+
+def test_title_is_trimmed(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "  Estudar Python  "},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["title"] == "Estudar Python"
+
+
+def test_reject_title_over_100_characters(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "A" * 101},
+    )
+
+    assert response.status_code == 422
+
 
 
 def test_update_task(client):
