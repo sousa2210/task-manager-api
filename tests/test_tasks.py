@@ -309,3 +309,54 @@ def test_list_tasks_filter_combines_with_pagination(client):
     assert len(tasks) == 1
     assert tasks[0]["title"] == "Pendente 2"
     assert tasks[0]["completed"] is False
+
+
+def test_list_tasks_searches_by_title(client):
+    client.post(
+        "/tasks",
+        json={"title": "Estudar Python"},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Estudar SQL"},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Ir ao mercado"},
+    )
+
+    response = client.get("/tasks?search=Python")
+
+    assert response.status_code == 200
+
+    tasks = response.json()
+
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Estudar Python"
+
+
+def test_list_tasks_search_combines_with_status_filter(client):
+    client.post(
+        "/tasks",
+        json={"title": "Estudar Python", "completed": False},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Estudar SQL", "completed": True},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Ir ao mercado", "completed": False},
+    )
+
+    response = client.get(
+        "/tasks?search=Estudar&completed=false"
+    )
+
+    assert response.status_code == 200
+
+    tasks = response.json()
+
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Estudar Python"
+    assert tasks[0]["completed"] is False

@@ -62,36 +62,39 @@ def create_task(task: TaskCreate):
 
 
 
+
 @app.get("/tasks", response_model=list[TaskResponse])
 def list_tasks(
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     completed: bool | None = Query(default=None),
+    search: str | None = Query(default=None, min_length=1, max_length=100),
 ):
+    query = "SELECT * FROM tasks"
+    conditions = []
+    parameters = []
+
+    if completed is not None:
+        conditions.append("completed = ?")
+        parameters.append(int(completed))
+
+    if search is not None:
+        conditions.append("title LIKE ?")
+        parameters.append(f"%{search}%")
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY id LIMIT ? OFFSET ?"
+    parameters.extend([limit, offset])
+
     with get_connection() as connection:
-        if completed is None:
-            rows = connection.execute(
-                """
-                SELECT * FROM tasks
-                ORDER BY id
-                LIMIT ? OFFSET ?
-                """,
-                (limit, offset),
-            ).fetchall()
-        else:
-            rows = connection.execute(
-                """
-                SELECT * FROM tasks
-                WHERE completed = ?
-                ORDER BY id
-                LIMIT ? OFFSET ?
-                """,
-                (int(completed), limit, offset),
-            ).fetchall()
+        rows = connection.execute(
+            query,
+            parameters,
+        ).fetchall()
 
         return [task_to_dict(row) for row in rows]
-
-
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)
