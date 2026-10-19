@@ -61,22 +61,36 @@ def create_task(task: TaskCreate):
 
 
 
+
 @app.get("/tasks", response_model=list[TaskResponse])
 def list_tasks(
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    completed: bool | None = Query(default=None),
 ):
     with get_connection() as connection:
-        rows = connection.execute(
-            """
-            SELECT * FROM tasks
-            ORDER BY id
-            LIMIT ? OFFSET ?
-            """,
-            (limit, offset),
-        ).fetchall()
+        if completed is None:
+            rows = connection.execute(
+                """
+                SELECT * FROM tasks
+                ORDER BY id
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT * FROM tasks
+                WHERE completed = ?
+                ORDER BY id
+                LIMIT ? OFFSET ?
+                """,
+                (int(completed), limit, offset),
+            ).fetchall()
 
         return [task_to_dict(row) for row in rows]
+
 
 
 

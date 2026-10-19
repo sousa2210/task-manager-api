@@ -256,3 +256,56 @@ def test_list_tasks_rejects_invalid_pagination(client):
     assert response_limit.status_code == 422
     assert response_offset.status_code == 422
     assert response_max_limit.status_code == 422
+
+
+def test_list_tasks_filters_by_completed_status(client):
+    client.post(
+        "/tasks",
+        json={"title": "Tarefa pendente", "completed": False},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Tarefa concluída", "completed": True},
+    )
+
+    pending_response = client.get("/tasks?completed=false")
+    completed_response = client.get("/tasks?completed=true")
+
+    assert pending_response.status_code == 200
+    assert completed_response.status_code == 200
+
+    pending_tasks = pending_response.json()
+    completed_tasks = completed_response.json()
+
+    assert len(pending_tasks) == 1
+    assert pending_tasks[0]["title"] == "Tarefa pendente"
+    assert pending_tasks[0]["completed"] is False
+
+    assert len(completed_tasks) == 1
+    assert completed_tasks[0]["title"] == "Tarefa concluída"
+    assert completed_tasks[0]["completed"] is True
+
+
+def test_list_tasks_filter_combines_with_pagination(client):
+    client.post(
+        "/tasks",
+        json={"title": "Pendente 1", "completed": False},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Pendente 2", "completed": False},
+    )
+    client.post(
+        "/tasks",
+        json={"title": "Concluída", "completed": True},
+    )
+
+    response = client.get("/tasks?completed=false&limit=1&offset=1")
+
+    assert response.status_code == 200
+
+    tasks = response.json()
+
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Pendente 2"
+    assert tasks[0]["completed"] is False
