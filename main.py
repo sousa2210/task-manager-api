@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Query, Response
 
 from database import get_connection, initialize_database
 from schemas import TaskCreate, TaskUpdate, TaskResponse, TaskPartialUpdate
@@ -60,14 +60,24 @@ def create_task(task: TaskCreate):
         return task_to_dict(row)
 
 
+
 @app.get("/tasks", response_model=list[TaskResponse])
-def list_tasks():
+def list_tasks(
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
     with get_connection() as connection:
         rows = connection.execute(
-            "SELECT * FROM tasks ORDER BY id"
+            """
+            SELECT * FROM tasks
+            ORDER BY id
+            LIMIT ? OFFSET ?
+            """,
+            (limit, offset),
         ).fetchall()
 
         return [task_to_dict(row) for row in rows]
+
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)

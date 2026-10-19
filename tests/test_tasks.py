@@ -220,3 +220,39 @@ def test_patch_rejects_unknown_field(client):
     )
 
     assert response.status_code == 422
+
+def test_list_tasks_respects_limit(client):
+    for number in range(3):
+        client.post(
+            "/tasks",
+            json={"title": f"Tarefa {number + 1}"},
+        )
+
+    response = client.get("/tasks?limit=2")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_list_tasks_respects_offset(client):
+    for number in range(3):
+        client.post(
+            "/tasks",
+            json={"title": f"Tarefa {number + 1}"},
+        )
+
+    response = client.get("/tasks?offset=2")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == "Tarefa 3"
+
+
+def test_list_tasks_rejects_invalid_pagination(client):
+    response_limit = client.get("/tasks?limit=0")
+    response_offset = client.get("/tasks?offset=-1")
+    response_max_limit = client.get("/tasks?limit=101")
+
+    assert response_limit.status_code == 422
+    assert response_offset.status_code == 422
+    assert response_max_limit.status_code == 422
