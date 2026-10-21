@@ -360,3 +360,21 @@ def test_list_tasks_search_combines_with_status_filter(client):
     assert len(tasks) == 1
     assert tasks[0]["title"] == "Estudar Python"
     assert tasks[0]["completed"] is False
+
+
+def test_list_tasks_search_returns_empty_list_when_no_match(client):
+    client.post(
+        "/tasks",
+        json={"title": "Estudar Python"},
+    )
+
+    response = client.get("/tasks?search=Java")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_tasks_rejects_empty_search(client):
+    response = client.get("/tasks?search=")
+
+    assert response.status_code == 422
