@@ -184,13 +184,6 @@ def partial_update_task(task_id: int, updated_fields: TaskPartialUpdate):
                 detail="Tarefa não encontrada",
             )
 
-        allowed_fields = {"title", "description", "completed"}
-
-        if not changes.keys() <= allowed_fields:
-            raise HTTPException(
-                status_code=400,
-                detail="Campo inválido para atualização.",
-            )
 
         values = []
         for field, value in changes.items():
