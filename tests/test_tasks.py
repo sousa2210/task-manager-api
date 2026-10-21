@@ -17,6 +17,31 @@ def client(tmp_path, monkeypatch):
     with TestClient(main.app) as test_client:
         yield test_client
 
+def test_get_connection_rolls_back_on_error(tmp_path, monkeypatch):
+    test_database = tmp_path / "test_rollback.db"
+    monkeypatch.setattr(database, "DATABASE_PATH", test_database)
+
+    database.initialize_database()
+
+    with pytest.raises(RuntimeError, match="Erro simulado"):
+        with database.get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO tasks (title, description, completed)
+                VALUES (?, ?, ?)
+                """,
+                ("Tarefa de teste", "", 0),
+            )
+
+            raise RuntimeError("Erro simulado")
+
+    with database.get_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM tasks WHERE title = ?",
+            ("Tarefa de teste",),
+        ).fetchone()
+
+    assert row is None
 
 def test_create_and_list_tasks(client):
     response = client.post(
