@@ -199,7 +199,7 @@ python -m pytest -v
 
 A suíte de testes verifica operações CRUD, validação de entradas, atualização parcial, paginação, filtros, pesquisa por título e tratamento de tarefas inexistentes.
 
-**Status atual:** 23 testes aprovados na última execução.
+**Status atual:** 24 testes aprovados na última execução.
 
 ## Banco de dados
 
