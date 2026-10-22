@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -25,6 +25,17 @@ def initialize_database():
     with get_connection() as connection:
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -33,3 +44,16 @@ def initialize_database():
             )
             """
         )
+
+        task_columns = {
+            row["name"]
+            for row in connection.execute(
+                "PRAGMA table_info(tasks)"
+            ).fetchall()
+        }
+
+        if "user_id" not in task_columns:
+            connection.execute(
+                "ALTER TABLE tasks ADD COLUMN user_id INTEGER "
+                "REFERENCES users(id)"
+            )

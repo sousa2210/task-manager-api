@@ -7,16 +7,46 @@ import main
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
-    # Usa um banco temporário exclusivo para cada teste.
+    # Banco isolado e chave JWT exclusiva para os testes.
     test_database = tmp_path / "test_tasks.db"
-
     monkeypatch.setattr(database, "DATABASE_PATH", test_database)
+
+    monkeypatch.setenv(
+        "JWT_SECRET_KEY",
+        "chave-segura-exclusiva-para-testes-automatizados",
+    )
 
     database.initialize_database()
 
     with TestClient(main.app) as test_client:
-        yield test_client
+        # Cria um usuário para os testes de tarefas.
+        registration = test_client.post(
+            "/auth/register",
+            json={
+                "email": "tarefas@example.com",
+                "password": "SenhaForte123",
+            },
+        )
+        assert registration.status_code == 201
 
+        # Faz login para obter o token de acesso.
+        login = test_client.post(
+            "/auth/login",
+            json={
+                "email": "tarefas@example.com",
+                "password": "SenhaForte123",
+            },
+        )
+        assert login.status_code == 200
+
+        token = login.json()["access_token"]
+
+        # Envia o token automaticamente nas próximas requisições.
+        test_client.headers.update(
+            {"Authorization": f"Bearer {token}"}
+        )
+
+        yield test_client
 def test_get_connection_rolls_back_on_error(tmp_path, monkeypatch):
     test_database = tmp_path / "test_rollback.db"
     monkeypatch.setattr(database, "DATABASE_PATH", test_database)

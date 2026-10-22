@@ -19,3 +19,10 @@ __pycache__/
 .coverage
 htmlcov/
 tasks.db
+# Backups locais do banco SQLite
+*_backup.db
+
+# Bancos de dados SQLite e backups locais
+*.db
+*.sqlite
+*.sqlite3

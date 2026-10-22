@@ -1,9 +1,12 @@
-from contextlib import asynccontextmanager
+﻿from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 
+from auth_dependencies import get_current_user
+from auth_routes import router as auth_router
 from database import get_connection, initialize_database
 from schemas import TaskCreate, TaskUpdate, TaskResponse, TaskPartialUpdate
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,18 +17,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Task Manager API",
     description="API para gerenciamento de tarefas",
-    version="0.4.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
+app.include_router(auth_router)
 
 
 def task_to_dict(row):
     task = dict(row)
     task["completed"] = bool(task["completed"])
     return task
-
-
 
 
 @app.get("/")
@@ -42,25 +44,30 @@ def health_check():
 
 
 @app.post("/tasks", status_code=201, response_model=TaskResponse)
-def create_task(task: TaskCreate):
+def create_task(
+    task: TaskCreate,
+    current_user: dict = Depends(get_current_user),
+):
     with get_connection() as connection:
         cursor = connection.execute(
             """
-            INSERT INTO tasks (title, description, completed)
-            VALUES (?, ?, ?)
+            INSERT INTO tasks (title, description, completed, user_id)
+            VALUES (?, ?, ?, ?)
             """,
-            (task.title, task.description, int(task.completed)),
+            (
+                task.title,
+                task.description,
+                int(task.completed),
+                current_user["id"],
+            ),
         )
 
         row = connection.execute(
-            "SELECT * FROM tasks WHERE id = ?",
-            (cursor.lastrowid,),
+            "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+            (cursor.lastrowid, current_user["id"]),
         ).fetchone()
 
         return task_to_dict(row)
-
-
-
 
 
 @app.get("/tasks", response_model=list[TaskResponse])
@@ -69,10 +76,11 @@ def list_tasks(
     offset: int = Query(default=0, ge=0),
     completed: bool | None = Query(default=None),
     search: str | None = Query(default=None, min_length=1, max_length=100),
+    current_user: dict = Depends(get_current_user),
 ):
     query = "SELECT * FROM tasks"
-    conditions = []
-    parameters = []
+    conditions = ["user_id = ?"]
+    parameters = [current_user["id"]]
 
     if completed is not None:
         conditions.append("completed = ?")
@@ -82,88 +90,88 @@ def list_tasks(
         conditions.append("title LIKE ?")
         parameters.append(f"%{search}%")
 
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
+    query += " WHERE " + " AND ".join(conditions)
     query += " ORDER BY id LIMIT ? OFFSET ?"
     parameters.extend([limit, offset])
 
     with get_connection() as connection:
-        rows = connection.execute(
-            query,
-            parameters,
-        ).fetchall()
-
+        rows = connection.execute(query, parameters).fetchall()
         return [task_to_dict(row) for row in rows]
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)
-def get_task(task_id: int):
+def get_task(
+    task_id: int,
+    current_user: dict = Depends(get_current_user),
+):
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT * FROM tasks WHERE id = ?",
-            (task_id,),
+            "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, current_user["id"]),
         ).fetchone()
 
         if row is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Tarefa não encontrada",
-            )
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
         return task_to_dict(row)
 
 
 @app.put("/tasks/{task_id}", response_model=TaskResponse)
-def update_task(task_id: int, updated_task: TaskUpdate):
+def update_task(
+    task_id: int,
+    updated_task: TaskUpdate,
+    current_user: dict = Depends(get_current_user),
+):
     with get_connection() as connection:
         cursor = connection.execute(
             """
             UPDATE tasks
             SET title = ?, description = ?, completed = ?
-            WHERE id = ?
+            WHERE id = ? AND user_id = ?
             """,
             (
                 updated_task.title,
                 updated_task.description,
                 int(updated_task.completed),
                 task_id,
+                current_user["id"],
             ),
         )
 
         if cursor.rowcount == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Tarefa não encontrada",
-            )
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
         row = connection.execute(
-            "SELECT * FROM tasks WHERE id = ?",
-            (task_id,),
+            "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, current_user["id"]),
         ).fetchone()
 
         return task_to_dict(row)
 
 
 @app.delete("/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
+def delete_task(
+    task_id: int,
+    current_user: dict = Depends(get_current_user),
+):
     with get_connection() as connection:
         cursor = connection.execute(
-            "DELETE FROM tasks WHERE id = ?",
-            (task_id,),
+            "DELETE FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, current_user["id"]),
         )
 
         if cursor.rowcount == 0:
-            raise HTTPException(
-                status_code=404,
-                detail="Tarefa não encontrada",
-            )
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
     return Response(status_code=204)
 
 
 @app.patch("/tasks/{task_id}", response_model=TaskResponse)
-def partial_update_task(task_id: int, updated_fields: TaskPartialUpdate):
+def partial_update_task(
+    task_id: int,
+    updated_fields: TaskPartialUpdate,
+    current_user: dict = Depends(get_current_user),
+):
     changes = updated_fields.model_dump(exclude_unset=True)
 
     if not changes:
@@ -174,36 +182,33 @@ def partial_update_task(task_id: int, updated_fields: TaskPartialUpdate):
 
     with get_connection() as connection:
         row = connection.execute(
-            "SELECT * FROM tasks WHERE id = ?",
-            (task_id,),
+            "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, current_user["id"]),
         ).fetchone()
 
         if row is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Tarefa não encontrada",
-            )
-
+            raise HTTPException(status_code=404, detail="Tarefa não encontrada")
 
         values = []
         for field, value in changes.items():
             if field == "completed":
                 value = int(value)
-
             values.append(value)
 
-        set_clause = ", ".join(
-            f"{field} = ?" for field in changes
-        )
+        set_clause = ", ".join(f"{field} = ?" for field in changes)
 
         connection.execute(
-            f"UPDATE tasks SET {set_clause} WHERE id = ?",
-            (*values, task_id),
+            f"""
+            UPDATE tasks
+            SET {set_clause}
+            WHERE id = ? AND user_id = ?
+            """,
+            (*values, task_id, current_user["id"]),
         )
 
         updated_row = connection.execute(
-            "SELECT * FROM tasks WHERE id = ?",
-            (task_id,),
+            "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, current_user["id"]),
         ).fetchone()
 
         return task_to_dict(updated_row)
