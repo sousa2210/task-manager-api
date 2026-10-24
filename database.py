@@ -1,11 +1,12 @@
-﻿import sqlite3
+﻿import os
+import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
 
-DATABASE_PATH = Path(__file__).resolve().parent / "tasks.db"
-
-
+DATABASE_PATH = Path(
+    os.getenv("DATABASE_PATH", str(Path(__file__).resolve().parent / "tasks.db"))
+)
 @contextmanager
 def get_connection():
     connection = sqlite3.connect(DATABASE_PATH)

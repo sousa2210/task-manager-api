@@ -1,0 +1,15 @@
+﻿services:
+  api:
+    build: .
+    container_name: task-manager-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_PATH: /data/tasks.db
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY no arquivo .env}
+    volumes:
+      - task_manager_data:/data
+    restart: unless-stopped
+
+volumes:
+  task_manager_data:

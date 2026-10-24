@@ -209,6 +209,70 @@ Na última execução registrada, os **31 testes passaram**, cobrindo autentica�
 - Os arquivos locais do SQLite são excluídos do versionamento pelo `.gitignore`.
 - Para produção, avalie também HTTPS, limitação de tentativas de login, política de renovação de tokens, migrações de banco e gestão segura de segredos.
 
+## Executando com Docker
+
+### Pré-requisitos
+
+- Docker Desktop instalado e em execução.
+- Git instalado para clonar o repositório.
+
+### Configuração
+
+Na pasta raiz do projeto, crie um arquivo `.env` com uma chave secreta JWT aleatória. No PowerShell, execute:
+
+```powershell
+$key = python -c "import secrets; print(secrets.token_urlsafe(48))"
+"JWT_SECRET_KEY=$key" | Set-Content -Encoding ascii .env
+```
+
+**Importante:** não compartilhe a chave secreta nem publique o arquivo `.env`.
+
+### Iniciar a aplicação
+
+Para construir a imagem e iniciar o contêiner:
+
+```powershell
+docker compose up --build -d
+```
+
+Verifique o estado do contêiner:
+
+```powershell
+docker compose ps
+```
+
+A documentação interativa da API estará disponível em:
+
+http://localhost:8000/docs
+
+Verifique a saúde da aplicação em:
+
+http://localhost:8000/health
+
+### Comandos úteis
+
+Visualizar os logs:
+
+```powershell
+docker compose logs -f api
+```
+
+Reiniciar a API:
+
+```powershell
+docker compose restart api
+```
+
+Parar os contêineres:
+
+```powershell
+docker compose down
+```
+
+O banco de dados é armazenado em um volume persistente do Docker, mantendo os dados após reinicializações e recriações do contêiner.
+
+**Atenção:** o comando `docker compose down -v` remove também o volume do banco de dados e pode apagar os dados armazenados.
+
 ## Autor
 
 **Vinicio Sousa**
