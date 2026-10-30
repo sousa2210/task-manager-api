@@ -70,10 +70,20 @@ def login_user(credentials: UserLogin):
             (credentials.email,),
         ).fetchone()
 
-    if user is None or not verify_password(
-        credentials.password,
-        user["password_hash"],
-    ):
+    password_valid = False
+
+    if user is not None:
+        password_valid = verify_password(
+            credentials.password,
+            user["password_hash"],
+        )
+
+    print(
+        f"LOGIN DEBUG: user_found={user is not None}, "
+        f"password_valid={password_valid}"
+    )
+
+    if not password_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="E-mail ou senha incorretos.",
