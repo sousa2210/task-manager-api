@@ -1,5 +1,6 @@
-﻿from pydantic import BaseModel, ConfigDict, Field, field_validator
+﻿from datetime import datetime
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=100)
@@ -81,7 +82,7 @@ class UserLogin(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: str
-    created_at: str
+    created_at: datetime | str
 
 
 class TokenResponse(BaseModel):
