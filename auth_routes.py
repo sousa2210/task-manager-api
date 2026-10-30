@@ -78,10 +78,7 @@ def login_user(credentials: UserLogin):
             user["password_hash"],
         )
 
-    print(
-        f"LOGIN DEBUG: user_found={user is not None}, "
-        f"password_valid={password_valid}"
-    )
+
 
     if not password_valid:
         raise HTTPException(
