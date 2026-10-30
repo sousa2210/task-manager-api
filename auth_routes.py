@@ -1,9 +1,11 @@
-﻿import sqlite3
+﻿
+import sqlite3
 
+import psycopg
 from fastapi import APIRouter, HTTPException, status
 
 from auth import create_access_token, get_password_hash, verify_password
-from database import get_connection
+from database import DATABASE_URL, get_connection
 from schemas import TokenResponse, UserCreate, UserLogin, UserResponse
 
 
@@ -20,26 +22,36 @@ def register_user(user: UserCreate):
 
     try:
         with get_connection() as connection:
-            cursor = connection.execute(
-                """
-                INSERT INTO users (email, password_hash)
-                VALUES (?, ?)
-                """,
-                (user.email, hashed_password),
-            )
+            if DATABASE_URL:
+                row = connection.execute(
+                    """
+                    INSERT INTO users (email, password_hash)
+                    VALUES (?, ?)
+                    RETURNING id, email, created_at
+                    """,
+                    (user.email, hashed_password),
+                ).fetchone()
+            else:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO users (email, password_hash)
+                    VALUES (?, ?)
+                    """,
+                    (user.email, hashed_password),
+                )
 
-            row = connection.execute(
-                """
-                SELECT id, email, created_at
-                FROM users
-                WHERE id = ?
-                """,
-                (cursor.lastrowid,),
-            ).fetchone()
+                row = connection.execute(
+                    """
+                    SELECT id, email, created_at
+                    FROM users
+                    WHERE id = ?
+                    """,
+                    (cursor.lastrowid,),
+                ).fetchone()
 
             return dict(row)
 
-    except sqlite3.IntegrityError:
+    except (sqlite3.IntegrityError, psycopg.errors.UniqueViolation):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Este e-mail já está cadastrado.",

@@ -43,6 +43,7 @@ def health_check():
     return {"status": "healthy"}
 
 
+
 @app.post("/tasks", status_code=201, response_model=TaskResponse)
 def create_task(
     task: TaskCreate,
@@ -53,6 +54,7 @@ def create_task(
             """
             INSERT INTO tasks (title, description, completed, user_id)
             VALUES (?, ?, ?, ?)
+            RETURNING id
             """,
             (
                 task.title,
@@ -62,12 +64,15 @@ def create_task(
             ),
         )
 
+        task_id = cursor.fetchone()["id"]
+
         row = connection.execute(
             "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
-            (cursor.lastrowid, current_user["id"]),
+            (task_id, current_user["id"]),
         ).fetchone()
 
         return task_to_dict(row)
+
 
 
 @app.get("/tasks", response_model=list[TaskResponse])
