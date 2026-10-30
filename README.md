@@ -1,31 +1,47 @@
 ﻿# Task Manager API
 
-API REST para gerenciamento de tarefas, desenvolvida com Python e FastAPI. O projeto utiliza SQLite, autenticação JWT, hash de senhas com Argon2 e testes automatizados com Pytest.
+API REST para gerenciamento de tarefas, desenvolvida com **Python e FastAPI**, com autenticação JWT, controle de acesso por usuário e persistência de dados em bancos relacionais.
 
-O objetivo é demonstrar conhecimentos práticos em desenvolvimento backend, APIs REST, autenticação, autorização, SQL, validação de dados e testes automatizados.
+O projeto utiliza **SQLite no ambiente local** e **PostgreSQL em produção**, com deploy realizado no Render e banco hospedado no Neon.
+
+O objetivo é demonstrar conhecimentos práticos em desenvolvimento Backend, construção de APIs REST, autenticação, autorização, integração com bancos de dados, validação de dados e testes automatizados.
+
+## Demonstração
+
+- **API em produção:** https://task-manager-api-vinicio.onrender.com/
+- **Documentação Swagger:** https://task-manager-api-vinicio.onrender.com/docs
+- **Documentação ReDoc:** https://task-manager-api-vinicio.onrender.com/redoc
+- **Repositório GitHub:** https://github.com/sousa2210/task-manager-api
 
 ## Tecnologias
 
 - Python 3.13
 - FastAPI
-- SQLite
 - Pydantic
-- JWT com PyJWT
-- Argon2 com pwdlib
-- Pytest e HTTPX
+- SQLite — desenvolvimento local
+- PostgreSQL — produção
+- Neon — hospedagem do banco PostgreSQL
+- Render — hospedagem da API
+- PyJWT — autenticação por tokens
+- Argon2 com pwdlib — hash de senhas
+- Psycopg — conexão com PostgreSQL
+- Pytest e HTTPX — testes automatizados
+- Docker e Docker Compose
 - Git e GitHub
 
 ## Funcionalidades
 
 ### Autenticação e segurança
+
 - Cadastro de usuários.
 - Login com e-mail e senha.
 - Senhas armazenadas com hash Argon2.
-- Tokens de acesso JWT com validade de 30 minutos.
+- Tokens JWT com validade de 30 minutos.
 - Proteção dos endpoints de tarefas.
-- Isolamento das tarefas por usuário.
+- Isolamento dos dados por usuário autenticado.
 
 ### Gerenciamento de tarefas
+
 - Criar, listar, consultar, atualizar e excluir tarefas.
 - Atualização completa com PUT e parcial com PATCH.
 - Filtro por status de conclusão.
@@ -33,12 +49,35 @@ O objetivo é demonstrar conhecimentos práticos em desenvolvimento backend, API
 - Paginação com limit e offset.
 - Validação de dados e tratamento de erros.
 
+### Banco de dados
+
+- Persistência local com SQLite.
+- PostgreSQL em ambiente de produção.
+- Integração com Neon.
+- Suporte a diferentes bancos por configuração de ambiente.
+
+## Arquitetura e implantação
+
+A aplicação utiliza uma configuração que permite trabalhar com diferentes bancos de dados:
+
+| Ambiente | Banco de dados | Hospedagem |
+|---|---|---|
+| Desenvolvimento | SQLite | Local |
+| Produção | PostgreSQL | Neon |
+| API em produção | FastAPI | Render |
+
+A conexão com o PostgreSQL é configurada pela variável de ambiente `DATABASE_URL`.
+
+A chave utilizada para assinar os tokens JWT é configurada por `JWT_SECRET_KEY`.
+
+As credenciais não devem ser armazenadas diretamente no código-fonte.
+
 ## Requisitos
 
 - Python 3.13 ou compatível.
 - Git.
 
-## Como executar
+## Como executar localmente
 
 ### 1. Clonar o repositório
 
@@ -64,15 +103,13 @@ python -m pip install -r requirements.txt
 
 ### 4. Configurar a chave JWT
 
-A aplicação precisa da variável de ambiente `JWT_SECRET_KEY` para assinar e validar tokens.
-
-No PowerShell, gere uma chave aleatória e configure-a na sessão atual:
+No PowerShell:
 
 ```powershell
 $env:JWT_SECRET_KEY = python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Não compartilhe essa chave nem a publique no GitHub. Se reiniciar o terminal, configure a variável novamente. Em produção, use um gerenciador de segredos ou uma configuração segura equivalente.
+Não compartilhe essa chave nem a publique no GitHub.
 
 ### 5. Iniciar a API
 
@@ -80,7 +117,7 @@ Não compartilhe essa chave nem a publique no GitHub. Se reiniciar o terminal, c
 python -m uvicorn main:app --reload
 ```
 
-A API estará disponível em:
+A aplicação estará disponível em:
 
 - API: http://127.0.0.1:8000
 - Swagger UI: http://127.0.0.1:8000/docs
@@ -93,8 +130,6 @@ O banco SQLite é inicializado automaticamente quando a aplicação inicia.
 ### Cadastrar usuário
 
 `POST /auth/register`
-
-Exemplo de corpo JSON:
 
 ```json
 {
@@ -125,31 +160,30 @@ Os endpoints `/tasks` exigem autenticação.
 No Swagger UI:
 
 1. Execute o cadastro em `POST /auth/register`.
-2. Execute o login em `POST /auth/login` e copie o `access_token`.
-3. Clique em **Authorize**.
-4. Informe o token conforme solicitado pela interface e confirme.
-5. Execute os endpoints de tarefas.
-
-Não é necessário incluir o prefixo `Bearer ` manualmente se a interface solicitar apenas o token; siga o formato exibido pelo Swagger.
+2. Faça login em `POST /auth/login`.
+3. Copie o `access_token`.
+4. Clique em **Authorize**.
+5. Informe o token conforme solicitado pela interface.
+6. Execute os endpoints protegidos.
 
 ## Endpoints
 
 | Método | Endpoint | Descrição |
 |---|---|---|
-| GET | `/` | Verificar se a API está funcionando |
-| GET | `/health` | Verificar a saúde da aplicação |
+| GET | `/` | Verificar funcionamento da API |
+| GET | `/health` | Verificar saúde da aplicação |
 | POST | `/auth/register` | Cadastrar usuário |
-| POST | `/auth/login` | Fazer login e obter token |
-| POST | `/tasks` | Criar tarefa autenticada |
-| GET | `/tasks` | Listar e filtrar tarefas do usuário |
-| GET | `/tasks/{task_id}` | Consultar tarefa do usuário |
-| PUT | `/tasks/{task_id}` | Atualizar tarefa do usuário |
+| POST | `/auth/login` | Autenticar usuário |
+| POST | `/tasks` | Criar tarefa |
+| GET | `/tasks` | Listar tarefas do usuário |
+| GET | `/tasks/{task_id}` | Consultar tarefa |
+| PUT | `/tasks/{task_id}` | Atualizar tarefa |
 | PATCH | `/tasks/{task_id}` | Atualizar parcialmente |
-| DELETE | `/tasks/{task_id}` | Excluir tarefa do usuário |
+| DELETE | `/tasks/{task_id}` | Excluir tarefa |
 
-## Exemplos de tarefas
+## Exemplos de utilização
 
-Os exemplos a seguir pressupõem que você já fez login e autorizou a requisição com o token JWT.
+Os exemplos pressupõem que o usuário já esteja autenticado.
 
 ### Criar tarefa
 
@@ -172,86 +206,95 @@ Os exemplos a seguir pressupõem que você já fez login e autorizou a requisiç
 
 ### Filtrar por conclusão
 
-- `GET /tasks?completed=true`
-- `GET /tasks?completed=false`
+```text
+GET /tasks?completed=true
+GET /tasks?completed=false
+```
 
 ### Pesquisar por título
 
-`GET /tasks?search=Python`
+```text
+GET /tasks?search=Python
+```
 
-É possível combinar os filtros:
+Os filtros podem ser combinados:
 
-`GET /tasks?completed=false&search=Python&limit=10&offset=0`
+```text
+GET /tasks?completed=false&search=Python&limit=10&offset=0
+```
 
 ### Consultar, atualizar e excluir
 
-- `GET /tasks/1`
-- `PUT /tasks/1`
-- `PATCH /tasks/1`
-- `DELETE /tasks/1`
+```text
+GET /tasks/1
+PUT /tasks/1
+PATCH /tasks/1
+DELETE /tasks/1
+```
 
-Substitua `1` pelo ID da tarefa. O usuário autenticado só pode acessar as próprias tarefas.
+O usuário autenticado só pode acessar e modificar suas próprias tarefas.
 
 ## Testes automatizados
 
-Com o ambiente virtual ativado, execute:
+O projeto utiliza Pytest e HTTPX para validar o funcionamento da aplicação.
+
+Para executar:
 
 ```powershell
 python -m pytest -v
 ```
 
-Na última execução registrada, os **31 testes passaram**, cobrindo autenticação, operações CRUD, validações, filtros, paginação e isolamento entre usuários.
+**Resultado da última execução: 31 testes aprovados.**
 
-## Segurança e dados locais
+Os testes contemplam:
 
-- Configure `JWT_SECRET_KEY` por variável de ambiente.
-- Não publique chaves secretas, arquivos `.env`, bancos de dados ou backups locais.
-- Os arquivos locais do SQLite são excluídos do versionamento pelo `.gitignore`.
-- Para produção, avalie também HTTPS, limitação de tentativas de login, política de renovação de tokens, migrações de banco e gestão segura de segredos.
+- Cadastro e autenticação de usuários.
+- Validação de credenciais.
+- Proteção das rotas.
+- Isolamento entre usuários.
+- Operações CRUD de tarefas.
+- Atualizações completas e parciais.
+- Validação de dados.
+- Filtros, pesquisa e paginação.
+- Tratamento de erros.
 
 ## Executando com Docker
 
 ### Pré-requisitos
 
 - Docker Desktop instalado e em execução.
-- Git instalado para clonar o repositório.
+- Git instalado.
 
 ### Configuração
 
-Na pasta raiz do projeto, crie um arquivo `.env` com uma chave secreta JWT aleatória. No PowerShell, execute:
+Crie um arquivo `.env` na raiz do projeto com uma chave JWT aleatória:
 
 ```powershell
 $key = python -c "import secrets; print(secrets.token_urlsafe(48))"
 "JWT_SECRET_KEY=$key" | Set-Content -Encoding ascii .env
 ```
 
-**Importante:** não compartilhe a chave secreta nem publique o arquivo `.env`.
+Não compartilhe a chave secreta nem publique o arquivo `.env`.
 
 ### Iniciar a aplicação
-
-Para construir a imagem e iniciar o contêiner:
 
 ```powershell
 docker compose up --build -d
 ```
 
-Verifique o estado do contêiner:
+Verificar os contêineres:
 
 ```powershell
 docker compose ps
 ```
 
-A documentação interativa da API estará disponível em:
+A documentação estará disponível em:
 
 http://localhost:8000/docs
 
-Verifique a saúde da aplicação em:
-
-http://localhost:8000/health
-
 ### Comandos úteis
 
-Visualizar os logs:
+Visualizar logs:
 
 ```powershell
 docker compose logs -f api
@@ -269,13 +312,19 @@ Parar os contêineres:
 docker compose down
 ```
 
-O banco de dados é armazenado em um volume persistente do Docker, mantendo os dados após reinicializações e recriações do contêiner.
+O banco de dados utiliza o volume persistente configurado no Docker Compose. O comando `docker compose down -v` também remove os volumes e pode apagar os dados armazenados.
 
-**Atenção:** o comando `docker compose down -v` remove também o volume do banco de dados e pode apagar os dados armazenados.
+## Segurança
+
+- Senhas protegidas com Argon2.
+- Autenticação baseada em JWT.
+- Controle de acesso por usuário.
+- Credenciais configuradas por variáveis de ambiente.
+- Arquivos locais e informações sensíveis excluídos do versionamento.
 
 ## Autor
 
 **Vinicio Sousa**
 
 - GitHub: https://github.com/sousa2210
-- Repositório: https://github.com/sousa2210/task-manager-api
+- Projeto: https://github.com/sousa2210/task-manager-api
